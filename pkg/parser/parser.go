@@ -3,16 +3,15 @@ package parser
 import (
 	"encoding/csv"
 	"fmt"
-	"os"
-
-	"github.com/pagient/pagient-desktop/pkg/model"
-	"github.com/pagient/pagient-go/pagient"
+	"io"
 	"strconv"
+
+	"github.com/pagient/pagient-go/pagient"
 )
 
 // ParsePatientFile parses the file storing the patient data that has focus in the surgery software
 // Csv format has to be: "id|lastname|firstname|birthdate|ssn|sex||"
-func ParsePatientFile(file *os.File) (*pagient.Patient, error) {
+func ParsePatientFile(file io.Reader) (*pagient.Patient, error) {
 	reader := csv.NewReader(file)
 	reader.Comma = '|'
 
@@ -22,7 +21,7 @@ func ParsePatientFile(file *os.File) (*pagient.Patient, error) {
 	}
 
 	if len(lines) > 0 {
-		if len(lines[0]) != 7 {
+		if len(lines[0]) != 8 {
 			return nil, fmt.Errorf("patient file format wrong, it has to be: \"id|lastname|firstname|birthdate|ssn|sex||\"")
 		}
 

@@ -1,4 +1,4 @@
-package pagient_desktop
+package main
 
 import (
 	"os"

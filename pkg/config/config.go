@@ -3,6 +3,7 @@ package config
 import (
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -10,7 +11,6 @@ import (
 	_ "github.com/kardianos/minwinsvc" // import minwinsvc for windows services
 	"github.com/rs/zerolog/log"
 	"gopkg.in/ini.v1"
-	"path"
 )
 
 var (
@@ -46,7 +46,7 @@ type Config struct {
 
 // New prepares a new default configuration.
 func New() (*Config, error) {
-	cfg, err := ini.ShadowLoad(path.Join(appWorkPath, "/conf/app.ini"))
+	cfg, err := ini.Load(path.Join(appWorkPath, "/conf/app.ini"))
 	if err != nil {
 		return nil, err
 	}
@@ -60,6 +60,8 @@ func New() (*Config, error) {
 	if err = cfg.Section("backend").MapTo(backendCfg); err != nil {
 		return nil, err
 	}
+
+	backendCfg.Url = strings.TrimSuffix(backendCfg.Url, "/")
 
 	logCfg := new(Log)
 	if err = cfg.Section("log").MapTo(logCfg); err != nil {

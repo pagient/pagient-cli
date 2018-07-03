@@ -1,7 +1,7 @@
 package handler
 
 import (
-	"os"
+	"io"
 
 	"github.com/pagient/pagient-desktop/pkg/config"
 	"github.com/pagient/pagient-desktop/pkg/parser"
@@ -22,7 +22,7 @@ func NewFileHandler(cfg *config.Config) *FileHandler {
 }
 
 // PatientFileWrite handles a write to the patient file
-func (h *FileHandler) PatientFileWrite(file *os.File) error {
+func (h *FileHandler) PatientFileWrite(file io.Reader) error {
 	patient, err := parser.ParsePatientFile(file)
 	if err != nil {
 		return err
@@ -61,11 +61,13 @@ func (h *FileHandler) PatientFileWrite(file *os.File) error {
 	// load patient info
 	pat, err := client.PatientGet(patient.ID)
 	if err != nil {
-		return err
+		if !pagient.IsNotFound(err) {
+			return err
+		}
 	}
 
 	// patient doesn't exist, so add it
-	if pat == nil {
+	if pat.ID == 0 {
 		err = client.PatientAdd(patient)
 		if err != nil {
 			return err
