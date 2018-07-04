@@ -41,17 +41,23 @@ func (h *FileHandler) PatientFileWrite(file io.Reader) error {
 		lastID := h.lastEntry.(*pagient.Patient).ID
 		pat, err := client.PatientGet(lastID)
 		if err != nil {
-			return err
-		}
-
-		if pat.PagerID == 0 {
-			if err := client.PatientRemove(lastID); err != nil {
+			// patient not found so treat patient as if there was no last entry
+			if !pagient.IsNotFound(err) {
 				return err
 			}
-		} else {
-			pat.Active = false
-			if err := client.PatientUpdate(pat); err != nil {
-				return err
+		}
+
+		// last patient exists
+		if pat.ID != 0 {
+			if pat.PagerID == 0 {
+				if err := client.PatientRemove(lastID); err != nil {
+					return err
+				}
+			} else {
+				pat.Active = false
+				if err := client.PatientUpdate(pat); err != nil {
+					return err
+				}
 			}
 		}
 
