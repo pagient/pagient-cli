@@ -48,6 +48,11 @@ func (h *FileHandler) PatientFileWrite(file io.Reader) error {
 			if err := client.PatientRemove(lastID); err != nil {
 				return err
 			}
+		} else {
+			pat.Active = false
+			if err := client.PatientUpdate(pat); err != nil {
+				return err
+			}
 		}
 
 		h.lastEntry = nil
@@ -68,8 +73,13 @@ func (h *FileHandler) PatientFileWrite(file io.Reader) error {
 
 	// patient doesn't exist, so add it
 	if pat.ID == 0 {
-		err = client.PatientAdd(patient)
-		if err != nil {
+		patient.Active = true
+		if err = client.PatientAdd(patient); err != nil {
+			return err
+		}
+	} else {
+		pat.Active = true
+		if err = client.PatientUpdate(pat); err != nil {
 			return err
 		}
 	}

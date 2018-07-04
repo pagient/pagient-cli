@@ -29,7 +29,7 @@
   branch = "master"
   name = "github.com/pagient/pagient-go"
   packages = ["pagient"]
-  revision = "b5fb220ce79a2f7082b185dddb06a3d30a239b10"
+  revision = "ef7f567466df8a13b929ae9b1aa6c97da86efd47"
 
 [[projects]]
   name = "github.com/rs/zerolog"
@@ -50,7 +50,7 @@
     "windows",
     "windows/svc"
   ]
-  revision = "7138fd3d9dc8335c567ca206f4333fb75eb05d56"
+  revision = "151529c776cdc58ddbe7963ba9af779f3577b419"
 
 [[projects]]
   name = "golang.org/x/text"
