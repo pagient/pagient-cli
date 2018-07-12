@@ -12,6 +12,7 @@ import (
 	"github.com/rs/zerolog/log"
 	"golang.org/x/text/encoding/charmap"
 	"gopkg.in/urfave/cli.v2"
+	"github.com/pagient/pagient-go/pagient"
 )
 
 // Watcher provides the sub-command to start the server.
@@ -63,7 +64,19 @@ func watcherAction(cfg *config.Config) cli.ActionFunc {
 					Str("file", cfg.General.WatchFile).
 					Msg("starting file watcher")
 
-				fileHandler := handler.NewFileHandler(cfg)
+				// initialize backend connection
+				client := pagient.NewClient(cfg.Backend.Url)
+				token, err := client.AuthLogin(cfg.Backend.User, cfg.Backend.Password)
+				if err != nil {
+					log.Fatal().
+						Err(err).
+						Msg("failed to authenticate with api server")
+
+					return err
+				}
+				tokenClient := pagient.NewTokenClient(cfg.Backend.Url, token.Token)
+
+				fileHandler := handler.NewFileHandler(cfg, tokenClient)
 
 				done := make(chan bool)
 				go func() error {
@@ -95,8 +108,7 @@ func watcherAction(cfg *config.Config) cli.ActionFunc {
 					}
 				}()
 
-				err := watcher.Add(path.Dir(cfg.General.WatchFile))
-				if err != nil {
+				if err := watcher.Add(path.Dir(cfg.General.WatchFile)); err != nil {
 					return err
 				}
 				<-done

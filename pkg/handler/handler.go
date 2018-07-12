@@ -11,13 +11,15 @@ import (
 // FileHandler struct
 type FileHandler struct {
 	cfg       *config.Config
+	apiClient pagient.ClientAPI
 	lastEntry interface{}
 }
 
 // NewFileHandler returns a preconfigured FileHandler
-func NewFileHandler(cfg *config.Config) *FileHandler {
+func NewFileHandler(cfg *config.Config, client pagient.ClientAPI) *FileHandler {
 	return &FileHandler{
-		cfg: cfg,
+		cfg:       cfg,
+		apiClient: client,
 	}
 }
 
@@ -29,39 +31,8 @@ func (h *FileHandler) PatientFileWrite(file io.Reader) error {
 	}
 
 	// don't do anything if it's still the same patient
-	if h.lastEntry != nil && h.lastEntry.(*pagient.Patient).ID == patient.ID {
+	if h.lastEntry != nil && h.lastEntry.(int) == patient.ID {
 		return nil
-	}
-
-	// initialize backend connection
-	client := pagient.NewClient(h.cfg.Backend.Url, h.cfg.Backend.User, h.cfg.Backend.Password)
-
-	// there was a previous patient, so retrieve and remove the patient if no pager has been assigned
-	if h.lastEntry != nil {
-		lastID := h.lastEntry.(*pagient.Patient).ID
-		pat, err := client.PatientGet(lastID)
-		if err != nil {
-			// patient not found so treat patient as if there was no last entry
-			if !pagient.IsNotFound(err) {
-				return err
-			}
-		}
-
-		// last patient exists
-		if pat.ID != 0 {
-			if pat.PagerID == 0 {
-				if err := client.PatientRemove(lastID); err != nil {
-					return err
-				}
-			} else {
-				pat.Active = false
-				if err := client.PatientUpdate(pat); err != nil {
-					return err
-				}
-			}
-		}
-
-		h.lastEntry = nil
 	}
 
 	// file doesn't contain any patient
@@ -70,27 +41,25 @@ func (h *FileHandler) PatientFileWrite(file io.Reader) error {
 	}
 
 	// load patient info
-	pat, err := client.PatientGet(patient.ID)
-	if err != nil {
-		if !pagient.IsNotFound(err) {
-			return err
-		}
+	pat, err := h.apiClient.PatientGet(patient.ID)
+	if err != nil && !pagient.IsNotFound(err) {
+		return err
 	}
 
 	// patient doesn't exist, so add it
 	if pat.ID == 0 {
 		patient.Active = true
-		if err = client.PatientAdd(patient); err != nil {
+		if err = h.apiClient.PatientAdd(patient); err != nil {
 			return err
 		}
 	} else {
 		pat.Active = true
-		if err = client.PatientUpdate(pat); err != nil {
+		if err = h.apiClient.PatientUpdate(pat); err != nil {
 			return err
 		}
 	}
 
-	h.lastEntry = patient
+	h.lastEntry = patient.ID
 
 	return nil
 }

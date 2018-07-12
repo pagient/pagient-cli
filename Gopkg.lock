@@ -14,6 +14,18 @@
   version = "v1.4.7"
 
 [[projects]]
+  name = "github.com/golang/protobuf"
+  packages = ["proto"]
+  revision = "b4deda0973fb4c70b50d226b1af49f3da59f5265"
+  version = "v1.1.0"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/jackspirou/syscerts"
+  packages = ["."]
+  revision = "b68f5469dff16e102bd6a2d5b3e79341c938d736"
+
+[[projects]]
   branch = "master"
   name = "github.com/kardianos/minwinsvc"
   packages = ["."]
@@ -29,7 +41,7 @@
   branch = "master"
   name = "github.com/pagient/pagient-go"
   packages = ["pagient"]
-  revision = "ef7f567466df8a13b929ae9b1aa6c97da86efd47"
+  revision = "82cf38d8d210778a8686c83b8645c325729fed0e"
 
 [[projects]]
   name = "github.com/rs/zerolog"
@@ -44,13 +56,31 @@
 
 [[projects]]
   branch = "master"
+  name = "golang.org/x/net"
+  packages = [
+    "context",
+    "context/ctxhttp"
+  ]
+  revision = "cffdcf672aee934982473246bc7e9a8ba446aa9b"
+
+[[projects]]
+  branch = "master"
+  name = "golang.org/x/oauth2"
+  packages = [
+    ".",
+    "internal"
+  ]
+  revision = "ef147856a6ddbb60760db74283d2424e98c87bff"
+
+[[projects]]
+  branch = "master"
   name = "golang.org/x/sys"
   packages = [
     "unix",
     "windows",
     "windows/svc"
   ]
-  revision = "151529c776cdc58ddbe7963ba9af779f3577b419"
+  revision = "1b2967e3c290b7c545b3db0deeda16e9be4f98a2"
 
 [[projects]]
   name = "golang.org/x/text"
@@ -67,10 +97,24 @@
   version = "v0.3.0"
 
 [[projects]]
+  name = "google.golang.org/appengine"
+  packages = [
+    "internal",
+    "internal/base",
+    "internal/datastore",
+    "internal/log",
+    "internal/remote_api",
+    "internal/urlfetch",
+    "urlfetch"
+  ]
+  revision = "b1f26356af11148e710935ed1ac8a7f5702c7612"
+  version = "v1.1.0"
+
+[[projects]]
   name = "gopkg.in/ini.v1"
   packages = ["."]
-  revision = "06f5f3d67269ccec1fe5fe4134ba6e982984f7f5"
-  version = "v1.37.0"
+  revision = "af26abd521cd7697481572fdbc4a53cbea3dde1b"
+  version = "v1.38.0"
 
 [[projects]]
   branch = "v2"
