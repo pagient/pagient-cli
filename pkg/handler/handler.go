@@ -3,8 +3,8 @@ package handler
 import (
 	"io"
 
-	"github.com/pagient/pagient-desktop/pkg/config"
-	"github.com/pagient/pagient-desktop/pkg/parser"
+	"github.com/pagient/pagient-cli/pkg/config"
+	"github.com/pagient/pagient-cli/pkg/parser"
 	"github.com/pagient/pagient-go/pagient"
 )
 

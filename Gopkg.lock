@@ -41,7 +41,7 @@
   branch = "master"
   name = "github.com/pagient/pagient-go"
   packages = ["pagient"]
-  revision = "82cf38d8d210778a8686c83b8645c325729fed0e"
+  revision = "fc9af00d6a251b6cdda4a429042a7849e98ae27d"
 
 [[projects]]
   name = "github.com/rs/zerolog"

@@ -7,8 +7,8 @@ import (
 
 	"github.com/fsnotify/fsnotify"
 	"github.com/oklog/run"
-	"github.com/pagient/pagient-desktop/pkg/config"
-	"github.com/pagient/pagient-desktop/pkg/handler"
+	"github.com/pagient/pagient-cli/pkg/config"
+	"github.com/pagient/pagient-cli/pkg/handler"
 	"github.com/rs/zerolog/log"
 	"golang.org/x/text/encoding/charmap"
 	"gopkg.in/urfave/cli.v2"

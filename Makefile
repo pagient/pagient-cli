@@ -1,4 +1,4 @@
-NAME := pagient-desktop
+NAME := pagient-cli
 IMPORT := github.com/pagient/$(NAME)
 DIST := dist
 
