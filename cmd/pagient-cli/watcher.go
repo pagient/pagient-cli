@@ -10,11 +10,11 @@ import (
 	"github.com/oklog/run"
 	"github.com/pagient/pagient-cli/pkg/config"
 	"github.com/pagient/pagient-cli/pkg/handler"
+	"github.com/pagient/pagient-go/pagient"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"golang.org/x/text/encoding/charmap"
 	"gopkg.in/urfave/cli.v2"
-	"github.com/pagient/pagient-go/pagient"
 )
 
 // Watcher provides the sub-command to start the server.
@@ -89,6 +89,8 @@ func Watcher() *cli.Command {
 					return err
 				}
 
+				stop := make(chan struct{})
+
 				gr.Add(func() error {
 					log.Info().
 						Str("file", cfg.General.WatchFile).
@@ -108,8 +110,7 @@ func Watcher() *cli.Command {
 
 					fileHandler := handler.NewFileHandler(cfg, tokenClient)
 
-					done := make(chan bool)
-					go func() error {
+					go func() {
 						for {
 							select {
 							case event := <-watcher.Events:
@@ -134,6 +135,9 @@ func Watcher() *cli.Command {
 								log.Error().
 									Err(err).
 									Msg("an error occurred during file watch")
+							case <-stop:
+								// close goroutine
+								return
 							}
 						}
 					}()
@@ -141,10 +145,12 @@ func Watcher() *cli.Command {
 					if err := watcher.Add(path.Dir(cfg.General.WatchFile)); err != nil {
 						return err
 					}
-					<-done
+					<-stop
 
 					return nil
 				}, func(reason error) {
+					close(stop)
+
 					if err := watcher.Close(); err != nil {
 						log.Info().
 							Err(err).
