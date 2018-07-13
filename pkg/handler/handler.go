@@ -34,6 +34,9 @@ func (h *FileHandler) PatientFileWrite(file io.Reader) error {
 		return nil
 	}
 
+	// mark patient as active
+	patient.Active = true
+
 	// load patient info
 	pat, err := h.apiClient.PatientGet(patient.ID)
 	if err != nil && !pagient.IsNotFound(err) {
@@ -42,12 +45,13 @@ func (h *FileHandler) PatientFileWrite(file io.Reader) error {
 
 	// patient doesn't exist, so add it
 	if pat.ID == 0 {
-		patient.Active = true
 		if err = h.apiClient.PatientAdd(patient); err != nil {
 			return err
 		}
 	} else {
-		pat.Active = true
+		pat.Name = patient.Name
+		pat.Ssn = patient.Ssn
+
 		if err = h.apiClient.PatientUpdate(pat); err != nil {
 			return err
 		}
