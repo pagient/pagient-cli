@@ -23,6 +23,7 @@ var (
 // General defines the general configuration.
 type General struct {
 	WatchFile string `ini:"WATCH_FILE"`
+	Root      string `ini:"ROOT"`
 }
 
 // backend defines the api backend configuration
@@ -59,6 +60,13 @@ func New() (*Config, error) {
 
 	generalCfg := new(General)
 	if err = cfg.Section("general").MapTo(generalCfg); err != nil {
+		return nil, err
+	}
+
+	if !filepath.IsAbs(generalCfg.Root) {
+		generalCfg.Root = path.Join(appWorkPath, generalCfg.Root)
+	}
+	if err := os.MkdirAll(generalCfg.Root, os.ModePerm); err != nil {
 		return nil, err
 	}
 
