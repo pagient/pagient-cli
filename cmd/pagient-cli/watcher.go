@@ -4,11 +4,13 @@ import (
 	"os"
 	"os/signal"
 	"path"
+	"strings"
 
 	"github.com/fsnotify/fsnotify"
 	"github.com/oklog/run"
 	"github.com/pagient/pagient-cli/pkg/config"
 	"github.com/pagient/pagient-cli/pkg/handler"
+	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"golang.org/x/text/encoding/charmap"
 	"gopkg.in/urfave/cli.v2"
@@ -16,119 +18,148 @@ import (
 )
 
 // Watcher provides the sub-command to start the server.
-func Watcher(cfg *config.Config) *cli.Command {
+func Watcher() *cli.Command {
 	return &cli.Command{
 		Name:   "watcher",
 		Usage:  "start the integrated server",
-		Before: watcherBefore(cfg),
-		Action: watcherAction(cfg),
-	}
-}
 
-func watcherBefore(cfg *config.Config) cli.BeforeFunc {
-	return func(c *cli.Context) error {
-		return nil
-	}
-}
+		Before: func(c *cli.Context) error {
+			return nil
+		},
 
-func watcherAction(cfg *config.Config) cli.ActionFunc {
-	return func(c *cli.Context) error {
-		var gr run.Group
-
-		{
-			stop := make(chan os.Signal, 1)
-
-			gr.Add(func() error {
-				signal.Notify(stop, os.Interrupt)
-
-				<-stop
-
-				return nil
-			}, func(err error) {
-				close(stop)
-			})
-		}
-
-		{
-			watcher, err := fsnotify.NewWatcher()
+		Action: func(c *cli.Context) error {
+			cfg, err := config.New()
 			if err != nil {
 				log.Fatal().
 					Err(err).
-					Msg("failed to create file watcher")
+					Msg("config could not be loaded")
 
-				return err
+				os.Exit(1)
 			}
 
-			gr.Add(func() error {
-				log.Info().
-					Str("file", cfg.General.WatchFile).
-					Msg("starting file watcher")
+			switch strings.ToLower(cfg.Log.Level) {
+			case "debug":
+				zerolog.SetGlobalLevel(zerolog.DebugLevel)
+			case "info":
+				zerolog.SetGlobalLevel(zerolog.InfoLevel)
+			case "warn":
+				zerolog.SetGlobalLevel(zerolog.WarnLevel)
+			case "error":
+				zerolog.SetGlobalLevel(zerolog.ErrorLevel)
+			case "fatal":
+				zerolog.SetGlobalLevel(zerolog.FatalLevel)
+			case "panic":
+				zerolog.SetGlobalLevel(zerolog.PanicLevel)
+			default:
+				zerolog.SetGlobalLevel(zerolog.InfoLevel)
+			}
 
-				// initialize backend connection
-				client := pagient.NewClient(cfg.Backend.Url)
-				token, err := client.AuthLogin(cfg.Backend.User, cfg.Backend.Password)
+			if cfg.Log.Pretty {
+				log.Logger = log.Output(
+					zerolog.ConsoleWriter{
+						Out:     os.Stderr,
+						NoColor: !cfg.Log.Colored,
+					},
+				)
+			}
+
+			var gr run.Group
+
+			{
+				stop := make(chan os.Signal, 1)
+
+				gr.Add(func() error {
+					signal.Notify(stop, os.Interrupt)
+
+					<-stop
+
+					return nil
+				}, func(err error) {
+					close(stop)
+				})
+			}
+
+			{
+				watcher, err := fsnotify.NewWatcher()
 				if err != nil {
 					log.Fatal().
 						Err(err).
-						Msg("failed to authenticate with api server")
+						Msg("failed to create file watcher")
 
 					return err
 				}
-				tokenClient := pagient.NewTokenClient(cfg.Backend.Url, token.Token)
 
-				fileHandler := handler.NewFileHandler(cfg, tokenClient)
+				gr.Add(func() error {
+					log.Info().
+						Str("file", cfg.General.WatchFile).
+						Msg("starting file watcher")
 
-				done := make(chan bool)
-				go func() error {
-					for {
-						select {
-						case event := <-watcher.Events:
-							switch event.Name {
-							case cfg.General.WatchFile:
-								if event.Op&fsnotify.Write == fsnotify.Write || event.Op&fsnotify.Create == fsnotify.Create {
-									file, err := os.Open(event.Name)
-									if err != nil {
-										log.Error().
-											Err(err).
-											Msg("could not open watched file")
-									}
+					// initialize backend connection
+					client := pagient.NewClient(cfg.Backend.Url)
+					token, err := client.AuthLogin(cfg.Backend.User, cfg.Backend.Password)
+					if err != nil {
+						log.Fatal().
+							Err(err).
+							Msg("failed to authenticate with api server")
 
-									if err = fileHandler.PatientFileWrite(charmap.ISO8859_1.NewDecoder().Reader(file)); err != nil {
-										log.Error().
-											Err(err).
-											Msg("an error occurred while handling a file write")
+						return err
+					}
+					tokenClient := pagient.NewTokenClient(cfg.Backend.Url, token.Token)
+
+					fileHandler := handler.NewFileHandler(cfg, tokenClient)
+
+					done := make(chan bool)
+					go func() error {
+						for {
+							select {
+							case event := <-watcher.Events:
+								switch event.Name {
+								case cfg.General.WatchFile:
+									if event.Op&fsnotify.Write == fsnotify.Write || event.Op&fsnotify.Create == fsnotify.Create {
+										file, err := os.Open(event.Name)
+										if err != nil {
+											log.Error().
+												Err(err).
+												Msg("could not open watched file")
+										}
+
+										if err = fileHandler.PatientFileWrite(charmap.ISO8859_1.NewDecoder().Reader(file)); err != nil {
+											log.Error().
+												Err(err).
+												Msg("an error occurred while handling a file write")
+										}
 									}
 								}
+							case err := <-watcher.Errors:
+								log.Error().
+									Err(err).
+									Msg("an error occurred during file watch")
 							}
-						case err := <-watcher.Errors:
-							log.Error().
-								Err(err).
-								Msg("an error occurred during file watch")
 						}
+					}()
+
+					if err := watcher.Add(path.Dir(cfg.General.WatchFile)); err != nil {
+						return err
 					}
-				}()
+					<-done
 
-				if err := watcher.Add(path.Dir(cfg.General.WatchFile)); err != nil {
-					return err
-				}
-				<-done
+					return nil
+				}, func(reason error) {
+					if err := watcher.Close(); err != nil {
+						log.Info().
+							Err(err).
+							Msg("failed to stop file watcher gracefully")
 
-				return nil
-			}, func(reason error) {
-				if err := watcher.Close(); err != nil {
+						return
+					}
+
 					log.Info().
-						Err(err).
-						Msg("failed to stop file watcher gracefully")
+						Err(reason).
+						Msg("file watcher stopped gracefully")
+				})
+			}
 
-					return
-				}
-
-				log.Info().
-					Err(reason).
-					Msg("file watcher stopped gracefully")
-			})
-		}
-
-		return gr.Run()
+			return gr.Run()
+		},
 	}
 }
