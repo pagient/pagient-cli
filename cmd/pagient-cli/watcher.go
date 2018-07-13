@@ -3,7 +3,6 @@ package main
 import (
 	"os"
 	"os/signal"
-	"path"
 	"strings"
 
 	"github.com/fsnotify/fsnotify"
@@ -142,7 +141,19 @@ func Watcher() *cli.Command {
 						}
 					}()
 
-					if err := watcher.Add(path.Dir(cfg.General.WatchFile)); err != nil {
+					// Note: we don't use path.Dir here because it does not handle case
+					//		 which path starts with two "/" in Windows: "//psf/Home/..."
+					watchFile := strings.Replace(cfg.General.WatchFile, "\\", "/", -1)
+					watchFolder := ""
+
+					i := strings.LastIndex(watchFile, "/")
+					if i == -1 {
+						watchFolder = watchFile
+					} else {
+						watchFolder = watchFile[:i]
+					}
+
+					if err := watcher.Add(watchFolder); err != nil {
 						return err
 					}
 					<-stop

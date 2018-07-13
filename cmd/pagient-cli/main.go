@@ -28,7 +28,7 @@ func main() {
 				Name:        "config",
 				Value:       "/conf/app.ini",
 				Usage:       "set config path",
-				Destination: &config.ConfigPath,
+				Destination: &config.Path,
 			},
 		},
 

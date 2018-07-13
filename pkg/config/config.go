@@ -14,7 +14,7 @@ import (
 )
 
 var (
-	ConfigPath  string
+	Path string
 
 	isWindows   bool
 	appWorkPath string
@@ -48,7 +48,11 @@ type Config struct {
 
 // New prepares a new default configuration.
 func New() (*Config, error) {
-	cfg, err := ini.Load(path.Join(appWorkPath, ConfigPath))
+	if !filepath.IsAbs(Path) {
+		Path = path.Join(appWorkPath, Path)
+	}
+
+	cfg, err := ini.Load(Path)
 	if err != nil {
 		return nil, err
 	}
