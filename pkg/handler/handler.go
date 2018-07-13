@@ -6,6 +6,7 @@ import (
 	"github.com/pagient/pagient-cli/pkg/config"
 	"github.com/pagient/pagient-cli/pkg/parser"
 	"github.com/pagient/pagient-go/pagient"
+	"github.com/rs/zerolog/log"
 )
 
 // FileHandler struct
@@ -28,6 +29,10 @@ func (h *FileHandler) PatientFileWrite(file io.Reader) error {
 	if err != nil {
 		return err
 	}
+
+	log.Debug().
+		Str("patient", patient.Name).
+		Msg("read patient from file")
 
 	// file doesn't contain any patient
 	if patient == nil {

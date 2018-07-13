@@ -113,6 +113,11 @@ func Watcher() *cli.Command {
 						for {
 							select {
 							case event := <-watcher.Events:
+								log.Debug().
+									Str("file name", event.Name).
+									Str("file operation", event.Op.String()).
+									Msg("watch file change detected")
+
 								switch event.Name {
 								case cfg.General.WatchFile:
 									if event.Op&fsnotify.Write == fsnotify.Write || event.Op&fsnotify.Create == fsnotify.Create {
@@ -152,6 +157,10 @@ func Watcher() *cli.Command {
 					} else {
 						watchFolder = watchFile[:i]
 					}
+
+					log.Debug().
+						Str("folder", watchFolder).
+						Msg("starting to watch directory")
 
 					if err := watcher.Add(watchFolder); err != nil {
 						return err
