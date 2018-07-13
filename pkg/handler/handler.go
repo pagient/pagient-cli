@@ -39,7 +39,7 @@ func (h *FileHandler) PatientFileWrite(file io.Reader) error {
 
 	// load patient info
 	pat, err := h.apiClient.PatientGet(patient.ID)
-	if err != nil && !pagient.IsNotFound(err) {
+	if err != nil && !pagient.IsNotFoundError(err) {
 		return err
 	}
 
