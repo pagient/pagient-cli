@@ -12,7 +12,6 @@ import (
 type FileHandler struct {
 	cfg       *config.Config
 	apiClient pagient.ClientAPI
-	lastEntry interface{}
 }
 
 // NewFileHandler returns a preconfigured FileHandler
@@ -28,11 +27,6 @@ func (h *FileHandler) PatientFileWrite(file io.Reader) error {
 	patient, err := parser.ParsePatientFile(file)
 	if err != nil {
 		return err
-	}
-
-	// don't do anything if it's still the same patient
-	if h.lastEntry != nil && h.lastEntry.(int) == patient.ID {
-		return nil
 	}
 
 	// file doesn't contain any patient
@@ -58,8 +52,6 @@ func (h *FileHandler) PatientFileWrite(file io.Reader) error {
 			return err
 		}
 	}
-
-	h.lastEntry = patient.ID
 
 	return nil
 }
