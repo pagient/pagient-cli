@@ -5,7 +5,9 @@ import (
 	"os/signal"
 	"path"
 	"strings"
+	"time"
 
+	"github.com/boz/go-throttle"
 	"github.com/fsnotify/fsnotify"
 	"github.com/oklog/run"
 	"github.com/pagient/pagient-cli/pkg/config"
@@ -120,6 +122,28 @@ func Watcher() *cli.Command {
 					tokenClient := pagient.NewTokenClient(cfg.Backend.Url, token.Token)
 
 					fileHandler := handler.NewFileHandler(cfg, tokenClient)
+					watchThrottle := throttle.NewThrottle(1 * time.Second, false)
+
+					go func() {
+						for watchThrottle.Next() {
+							file, err := os.Open(cfg.General.WatchFile)
+							if err != nil {
+								log.Error().
+									Err(err).
+									Msg("could not open watched file")
+							}
+
+							log.Debug().
+								Str("file name", file.Name()).
+								Msg("watch file change detected")
+
+							if err = fileHandler.PatientFileWrite(charmap.ISO8859_1.NewDecoder().Reader(file)); err != nil {
+								log.Error().
+									Err(err).
+									Msg("an error occurred while handling a file write")
+							}
+						}
+					}()
 
 					go func() {
 						for {
@@ -133,18 +157,7 @@ func Watcher() *cli.Command {
 								switch event.Name {
 								case cfg.General.WatchFile:
 									if event.Op&fsnotify.Write == fsnotify.Write || event.Op&fsnotify.Create == fsnotify.Create {
-										file, err := os.Open(event.Name)
-										if err != nil {
-											log.Error().
-												Err(err).
-												Msg("could not open watched file")
-										}
-
-										if err = fileHandler.PatientFileWrite(charmap.ISO8859_1.NewDecoder().Reader(file)); err != nil {
-											log.Error().
-												Err(err).
-												Msg("an error occurred while handling a file write")
-										}
+										watchThrottle.Trigger()
 									}
 								}
 							case err := <-watcher.Errors:
@@ -152,6 +165,7 @@ func Watcher() *cli.Command {
 									Err(err).
 									Msg("an error occurred during file watch")
 							case <-stop:
+								watchThrottle.Stop()
 								// close goroutine
 								return
 							}

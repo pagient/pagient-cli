@@ -2,6 +2,12 @@
 
 
 [[projects]]
+  branch = "master"
+  name = "github.com/boz/go-throttle"
+  packages = ["."]
+  revision = "fdc4eab740c14b7be4fcbcb300a9aaebf716fde5"
+
+[[projects]]
   name = "github.com/coreos/go-semver"
   packages = ["semver"]
   revision = "8ab6407b697782a06568d4b7f1db25550ec2e4c6"
@@ -125,6 +131,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "a42e7d1bbef984dd34d140c865b60c6fd4feb4aed27c6951ae1002be4e303f76"
+  inputs-digest = "2d617d68409696db8d7c8b3f1fec2df1f42ba6aba1d2f4812e2c69d925efd100"
   solver-name = "gps-cdcl"
   solver-version = 1
