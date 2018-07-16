@@ -56,6 +56,7 @@ func (h *FileHandler) PatientFileWrite(file io.Reader) error {
 	} else {
 		pat.Name = patient.Name
 		pat.Ssn = patient.Ssn
+		pat.Active = patient.Active
 
 		if err = h.apiClient.PatientUpdate(pat); err != nil {
 			return err
