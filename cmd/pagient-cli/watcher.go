@@ -90,7 +90,7 @@ func Watcher() *cli.Command {
 						Err(err).
 						Msg("failed to create file watcher")
 
-					return err
+					os.Exit(1)
 				}
 
 				stop := make(chan struct{})
@@ -108,7 +108,7 @@ func Watcher() *cli.Command {
 							Err(err).
 							Msg("failed to authenticate with api server")
 
-						return err
+						os.Exit(1)
 					}
 					tokenClient := pagient.NewTokenClient(cfg.Backend.URL, token.Token)
 
@@ -132,6 +132,8 @@ func Watcher() *cli.Command {
 								log.Error().
 									Err(err).
 									Msg("an error occurred while handling a file write")
+
+								os.Exit(1)
 							}
 						}
 					}()
