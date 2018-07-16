@@ -14,6 +14,7 @@ import (
 )
 
 var (
+	// Path of config file
 	Path string
 
 	isWindows   bool
@@ -26,9 +27,9 @@ type General struct {
 	Root      string `ini:"ROOT"`
 }
 
-// backend defines the api backend configuration
+// Backend defines the api backend configuration
 type Backend struct {
-	Url      string `ini:"URL"`
+	URL      string `ini:"URL"`
 	User     string `ini:"USER"`
 	Password string `ini:"PASSWORD"`
 }
@@ -75,7 +76,7 @@ func New() (*Config, error) {
 		return nil, err
 	}
 
-	backendCfg.Url = strings.TrimSuffix(backendCfg.Url, "/")
+	backendCfg.URL = strings.TrimSuffix(backendCfg.URL, "/")
 
 	logCfg := new(Log)
 	if err = cfg.Section("log").MapTo(logCfg); err != nil {

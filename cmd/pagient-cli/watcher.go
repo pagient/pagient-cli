@@ -22,8 +22,8 @@ import (
 // Watcher provides the sub-command to start the server.
 func Watcher() *cli.Command {
 	return &cli.Command{
-		Name:   "watcher",
-		Usage:  "start the integrated server",
+		Name:  "watcher",
+		Usage: "start the integrated server",
 
 		Before: func(c *cli.Context) error {
 			return nil
@@ -47,7 +47,7 @@ func Watcher() *cli.Command {
 			}
 			zerolog.SetGlobalLevel(level)
 
-			logFile, err := os.OpenFile(path.Join(cfg.General.Root, "pagient.log") , os.O_CREATE | os.O_APPEND | os.O_RDWR, 0666)
+			logFile, err := os.OpenFile(path.Join(cfg.General.Root, "pagient.log"), os.O_CREATE|os.O_APPEND|os.O_RDWR, 0666)
 			if err != nil {
 				log.Fatal().
 					Err(err).
@@ -101,7 +101,7 @@ func Watcher() *cli.Command {
 						Msg("starting file watcher")
 
 					// initialize backend connection
-					client := pagient.NewClient(cfg.Backend.Url)
+					client := pagient.NewClient(cfg.Backend.URL)
 					token, err := client.AuthLogin(cfg.Backend.User, cfg.Backend.Password)
 					if err != nil {
 						log.Fatal().
@@ -110,10 +110,10 @@ func Watcher() *cli.Command {
 
 						return err
 					}
-					tokenClient := pagient.NewTokenClient(cfg.Backend.Url, token.Token)
+					tokenClient := pagient.NewTokenClient(cfg.Backend.URL, token.Token)
 
 					fileHandler := handler.NewFileHandler(cfg, tokenClient)
-					watchThrottle := throttle.NewThrottle(1 * time.Second, false)
+					watchThrottle := throttle.NewThrottle(1*time.Second, false)
 
 					go func() {
 						for watchThrottle.Next() {
