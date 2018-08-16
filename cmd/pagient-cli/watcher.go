@@ -133,7 +133,25 @@ func Watcher() *cli.Command {
 									Err(err).
 									Msg("an error occurred while handling a file write")
 
-								os.Exit(1)
+								if pagient.IsUnauthorizedErr(err) {
+									log.Info().
+										Msg("trying to reauthenticate with api server")
+
+									// reauthenticate
+									token, err := client.AuthLogin(cfg.Backend.User, cfg.Backend.Password)
+									if err != nil {
+										log.Fatal().
+											Err(err).
+											Msg("failed to authenticate with api server")
+
+										os.Exit(1)
+									}
+									tokenClient := pagient.NewTokenClient(cfg.Backend.URL, token.Token)
+									fileHandler = handler.NewFileHandler(cfg, tokenClient)
+
+									// restart file handling
+									watchThrottle.Trigger()
+								}
 							}
 						}
 					}()
