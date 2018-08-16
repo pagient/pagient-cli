@@ -35,7 +35,7 @@ func (h *FileHandler) PatientFileWrite(file io.Reader) error {
 		Msg("read patient from file")
 
 	// file doesn't contain any patient
-	if patient == nil {
+	if patient == nil || patient.Ssn == "" {
 		return nil
 	}
 
