@@ -138,7 +138,7 @@ func Watcher() *cli.Command {
 									Msg("an error occurred while handling a file write")
 
 								if pagient.IsUnauthorizedErr(err) {
-									log.Info().
+									log.Debug().
 										Msg("trying to reauthenticate with api server")
 
 									// reauthenticate
