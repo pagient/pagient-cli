@@ -1,6 +1,7 @@
 package main
 
 import (
+	"io/ioutil"
 	"os"
 	"os/signal"
 	"path"
@@ -129,8 +130,11 @@ func Watcher() *cli.Command {
 								Msg("watch file change detected")
 
 							if err = fileHandler.PatientFileWrite(charmap.ISO8859_1.NewDecoder().Reader(file)); err != nil {
+								patakt, _ := ioutil.ReadFile(cfg.General.WatchFile)
+
 								log.Error().
 									Err(err).
+									Bytes("patakt.txt", patakt).
 									Msg("an error occurred while handling a file write")
 
 								if pagient.IsUnauthorizedErr(err) {
