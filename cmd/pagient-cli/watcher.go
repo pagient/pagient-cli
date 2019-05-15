@@ -8,12 +8,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/boz/go-throttle"
-	"github.com/fsnotify/fsnotify"
-	"github.com/oklog/run"
 	"github.com/pagient/pagient-cli/pkg/config"
 	"github.com/pagient/pagient-cli/pkg/handler"
 	"github.com/pagient/pagient-go/pagient"
+
+	"github.com/boz/go-throttle"
+	"github.com/fsnotify/fsnotify"
+	"github.com/oklog/run"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"golang.org/x/text/encoding/charmap"

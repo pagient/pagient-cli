@@ -6,6 +6,7 @@ import (
 
 	"github.com/pagient/pagient-cli/pkg/config"
 	"github.com/pagient/pagient-cli/pkg/version"
+
 	"gopkg.in/urfave/cli.v2"
 )
 

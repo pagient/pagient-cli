@@ -6,6 +6,7 @@ import (
 	"github.com/pagient/pagient-cli/pkg/config"
 	"github.com/pagient/pagient-cli/pkg/parser"
 	"github.com/pagient/pagient-go/pagient"
+
 	"github.com/rs/zerolog/log"
 )
 
