@@ -66,6 +66,14 @@
   revision = "e39cd57631a6a32c5265101221a025274ceb99f2"
 
 [[projects]]
+  digest = "1:cf31692c14422fa27c83a05292eb5cbe0fb2775972e8f1f8446a71549bd8980b"
+  name = "github.com/pkg/errors"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "ba968bfe8b2f7e042a574c888954fccecfa385b4"
+  version = "v0.8.1"
+
+[[projects]]
   digest = "1:fb63fb6cb9cf7310c6bd83998cc430ee5af1ec52612572ecb42c7aad74bd3598"
   name = "github.com/rs/zerolog"
   packages = [
@@ -170,6 +178,7 @@
     "github.com/kardianos/minwinsvc",
     "github.com/oklog/run",
     "github.com/pagient/pagient-go/pagient",
+    "github.com/pkg/errors",
     "github.com/rs/zerolog",
     "github.com/rs/zerolog/log",
     "golang.org/x/text/encoding/charmap",

@@ -23,8 +23,9 @@ var (
 
 // General defines the general configuration.
 type General struct {
-	WatchFile string `ini:"WATCH_FILE"`
-	Root      string `ini:"ROOT"`
+	WatchFile    string `ini:"WATCH_FILE"`
+	Root         string `ini:"ROOT"`
+	RestartDelay int    `ini:"RESTART_DELAY"`
 }
 
 // Backend defines the api backend configuration

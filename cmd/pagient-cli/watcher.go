@@ -1,23 +1,23 @@
 package main
 
 import (
-	"io/ioutil"
+	"io"
 	"os"
 	"os/signal"
 	"path"
 	"strings"
 	"time"
 
-	"github.com/pagient/pagient-cli/pkg/config"
-	"github.com/pagient/pagient-cli/pkg/handler"
+	"github.com/pagient/pagient-cli/internal/config"
+	"github.com/pagient/pagient-cli/internal/handler"
 	"github.com/pagient/pagient-go/pagient"
 
 	"github.com/boz/go-throttle"
 	"github.com/fsnotify/fsnotify"
 	"github.com/oklog/run"
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
-	"golang.org/x/text/encoding/charmap"
 	"gopkg.in/urfave/cli.v2"
 )
 
@@ -25,7 +25,7 @@ import (
 func Watcher() *cli.Command {
 	return &cli.Command{
 		Name:  "watcher",
-		Usage: "start the integrated server",
+		Usage: "start client file watcher",
 
 		Before: func(c *cli.Context) error {
 			return nil
@@ -37,8 +37,6 @@ func Watcher() *cli.Command {
 				log.Fatal().
 					Err(err).
 					Msg("config could not be loaded")
-
-				os.Exit(1)
 			}
 
 			level, err := zerolog.ParseLevel(cfg.Log.Level)
@@ -54,8 +52,6 @@ func Watcher() *cli.Command {
 				log.Fatal().
 					Err(err).
 					Msg("logfile could not be opened")
-
-				os.Exit(1)
 			}
 
 			if cfg.Log.Pretty {
@@ -72,94 +68,152 @@ func Watcher() *cli.Command {
 			var gr run.Group
 
 			{
-				stop := make(chan os.Signal, 1)
+				var stop chan os.Signal
 
 				gr.Add(func() error {
+					stop = make(chan os.Signal, 1)
+
 					signal.Notify(stop, os.Interrupt)
 
 					<-stop
 
 					return nil
 				}, func(err error) {
+					signal.Stop(stop)
 					close(stop)
 				})
 			}
 
+			// error chan for fileHandler
+			var errs chan error
 			{
-				watcher, err := fsnotify.NewWatcher()
-				if err != nil {
-					log.Fatal().
-						Err(err).
-						Msg("failed to create file watcher")
+				gr.Add(func() error {
+					errs = make(chan error)
 
-					os.Exit(1)
-				}
+					err := <-errs
 
-				stop := make(chan struct{})
+					return err
+				}, func(reason error) {
+					close(errs)
+				})
+			}
+
+			var fileChange chan io.Reader
+			{
+				var stop chan struct{}
+
+				// initialize backend connection
+				client := pagient.NewClient(cfg.Backend.URL)
 
 				gr.Add(func() error {
-					log.Info().
-						Str("file", cfg.General.WatchFile).
-						Msg("starting file watcher")
+					stop = make(chan struct{})
+					fileChange = make(chan io.Reader, 1)
 
-					// initialize backend connection
-					client := pagient.NewClient(cfg.Backend.URL)
+					// has to be done here to support gr.Run retry
 					token, err := client.AuthLogin(cfg.Backend.User, cfg.Backend.Password)
 					if err != nil {
-						log.Fatal().
-							Err(err).
-							Msg("failed to authenticate with api server")
+						if pagient.IsUnauthorizedErr(err) {
+							// login data is incorrect
+							// should immediately stop application
 
-						os.Exit(1)
+							// this produces a non pagient http error and thus does not restart
+							err = errors.Wrap(err, "failed to authenticate with api server")
+
+							log.Error().
+								Err(err).
+								Msg("")
+
+							return err
+						}
+
+						return err
 					}
-					tokenClient := pagient.NewTokenClient(cfg.Backend.URL, token.Token)
 
-					fileHandler := handler.NewFileHandler(cfg, tokenClient)
-					watchThrottle := throttle.NewThrottle(1*time.Second, false)
+					tokenClient := pagient.NewTokenClient(cfg.Backend.URL, token.Token)
+					fileHandler := handler.NewFileHandler(cfg, tokenClient, fileChange)
+
+					log.Info().
+						Msg("starting file handler")
+					fileHandler.Run(stop, errs)
+
+					<-stop
+
+					return nil
+				}, func(reason error) {
+					close(stop)
+				})
+			}
+
+			watchThrottle := throttle.NewThrottle(1*time.Second, false)
+			{
+				var stop chan struct{}
+
+				gr.Add(func() error {
+					stop = make(chan struct{})
 
 					go func() {
 						for watchThrottle.Next() {
 							file, err := os.Open(cfg.General.WatchFile)
 							if err != nil {
-								log.Error().
+								log.Warn().
 									Err(err).
 									Msg("could not open watched file")
+
+								break
 							}
 
-							log.Debug().
-								Str("file name", file.Name()).
-								Msg("watch file change detected")
-
-							if err = fileHandler.PatientFileWrite(charmap.ISO8859_1.NewDecoder().Reader(file)); err != nil {
-								patakt, _ := ioutil.ReadFile(cfg.General.WatchFile)
-
-								log.Error().
-									Err(err).
-									Bytes("patakt.txt", patakt).
-									Msg("an error occurred while handling a file write")
-
-								if pagient.IsUnauthorizedErr(err) {
-									log.Debug().
-										Msg("trying to reauthenticate with api server")
-
-									// reauthenticate
-									token, err := client.AuthLogin(cfg.Backend.User, cfg.Backend.Password)
-									if err != nil {
-										log.Fatal().
-											Err(err).
-											Msg("failed to authenticate with api server")
-
-										os.Exit(1)
-									}
-									tokenClient := pagient.NewTokenClient(cfg.Backend.URL, token.Token)
-									fileHandler = handler.NewFileHandler(cfg, tokenClient)
-
-									// restart file handling
-									watchThrottle.Trigger()
-								}
-							}
+							fileChange <- file
 						}
 					}()
+
+					<-stop
+
+					return nil
+				}, func(reason error) {
+					close(stop)
+					close(fileChange)
+				})
+			}
+
+			watcher, err := fsnotify.NewWatcher()
+			if err != nil {
+				log.Fatal().
+					Err(err).
+					Msg("failed to create file watcher")
+			}
+
+			// Note: we don't use path.Dir here because it does not handle case
+			//		 which path starts with two "/" in Windows: "//psf/Home/..."
+			watchFile := strings.Replace(cfg.General.WatchFile, "\\", "/", -1)
+			watchFolder := ""
+
+			i := strings.LastIndex(watchFile, "/")
+			if i == -1 {
+				watchFolder = watchFile
+			} else {
+				watchFolder = watchFile[:i]
+			}
+
+			if err := watcher.Add(watchFolder); err != nil {
+				log.Fatal().
+					Err(err).
+					Str("folder", watchFolder).
+					Msg("add folder to file watch")
+			}
+
+			{
+				var stop chan struct{}
+
+				log.Debug().
+					Str("watched folder", watchFolder).
+					Msg("")
+
+				gr.Add(func() error {
+					stop = make(chan struct{})
+
+					log.Info().
+						Str("file", cfg.General.WatchFile).
+						Msg("starting file watcher")
 
 					go func() {
 						for {
@@ -177,57 +231,54 @@ func Watcher() *cli.Command {
 									}
 								}
 							case err := <-watcher.Errors:
-								log.Error().
+								log.Warn().
 									Err(err).
 									Msg("an error occurred during file watch")
 							case <-stop:
-								watchThrottle.Stop()
 								// close goroutine
 								return
 							}
 						}
 					}()
 
-					// Note: we don't use path.Dir here because it does not handle case
-					//		 which path starts with two "/" in Windows: "//psf/Home/..."
-					watchFile := strings.Replace(cfg.General.WatchFile, "\\", "/", -1)
-					watchFolder := ""
-
-					i := strings.LastIndex(watchFile, "/")
-					if i == -1 {
-						watchFolder = watchFile
-					} else {
-						watchFolder = watchFile[:i]
-					}
-
-					log.Debug().
-						Str("folder", watchFolder).
-						Msg("starting to watch directory")
-
-					if err := watcher.Add(watchFolder); err != nil {
-						return err
-					}
 					<-stop
 
 					return nil
 				}, func(reason error) {
 					close(stop)
-
-					if err := watcher.Close(); err != nil {
-						log.Info().
-							Err(err).
-							Msg("failed to stop file watcher gracefully")
-
-						return
-					}
-
-					log.Info().
-						Err(reason).
-						Msg("file watcher stopped gracefully")
 				})
 			}
 
-			return gr.Run()
+			// auto restart loop
+			for {
+				err := gr.Run()
+				if err != nil {
+					if pagient.IsHTTPResponseErr(err) || pagient.IsHTTPTransportErr(err) {
+						time.Sleep(time.Duration(cfg.General.RestartDelay) * time.Second)
+						continue
+					}
+
+					log.Error().
+						Err(err).
+						Msg("")
+				}
+
+				if err := watcher.Close(); err != nil {
+					log.Error().
+						Err(err).
+						Msg("failed to close file watcher")
+
+					return err
+				}
+
+				watchThrottle.Stop()
+				break
+			}
+
+			log.Info().
+				Msg("file watcher stopped gracefully")
+
+			return nil
 		},
 	}
 }
