@@ -1,0 +1,23 @@
+[general]
+; file to watch
+WATCH_FILE    =
+; root path of stored data
+ROOT          = data/
+; auto restart delay in sec
+RESTART_DELAY = 30
+
+[backend]
+; url of pagient-server
+URL      =
+; user of pagient
+USER     =
+; password
+PASSWORD =
+
+[log]
+; set logging level
+LEVEL   = info
+; enable colored logging
+COLORED = false
+; enable pretty logging
+PRETTY  = false
