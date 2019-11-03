@@ -26,12 +26,12 @@
   version = "v1.4.7"
 
 [[projects]]
-  digest = "1:318f1c959a8a740366fce4b1e1eb2fd914036b4af58fbd0a003349b305f118ad"
+  digest = "1:573ca21d3669500ff845bdebee890eb7fc7f0f50c59f2132f2a0c6b03d85086a"
   name = "github.com/golang/protobuf"
   packages = ["proto"]
   pruneopts = "UT"
-  revision = "b5d812f8a3706043e23a9cd5babf2e5423744d30"
-  version = "v1.3.1"
+  revision = "6c65a5562fc06764971b7c5d05c76c75e84bdbf7"
+  version = "v1.3.2"
 
 [[projects]]
   branch = "master"
@@ -59,11 +59,11 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:6d89d3567ef955e7b7b8957470882ccac177420e28e8f71a5897f2bc645d690c"
+  digest = "1:0dd57cc546c974e0d6a5e5bfb566eac658f17549acdc2eab9e0729aca2731d5a"
   name = "github.com/pagient/pagient-go"
   packages = ["pagient"]
   pruneopts = "UT"
-  revision = "e39cd57631a6a32c5265101221a025274ceb99f2"
+  revision = "8662ac9679fe71873c78c86066feba0eff609c27"
 
 [[projects]]
   digest = "1:cf31692c14422fa27c83a05292eb5cbe0fb2775972e8f1f8446a71549bd8980b"
@@ -74,7 +74,7 @@
   version = "v0.8.1"
 
 [[projects]]
-  digest = "1:fb63fb6cb9cf7310c6bd83998cc430ee5af1ec52612572ecb42c7aad74bd3598"
+  digest = "1:6cf4e9f5ea82d48699eed7a836781037621227fb8551d7571b82aabde422fec1"
   name = "github.com/rs/zerolog"
   packages = [
     ".",
@@ -83,8 +83,8 @@
     "log",
   ]
   pruneopts = "UT"
-  revision = "acf3980132bfcdc48638724e6e3d9e5749b85999"
-  version = "v1.14.3"
+  revision = "b806a5ecbe5347ad9ef05121fea8f4acc65fa5fc"
+  version = "v1.15.0"
 
 [[projects]]
   branch = "master"
@@ -95,22 +95,22 @@
     "context/ctxhttp",
   ]
   pruneopts = "UT"
-  revision = "3ec19112720433827bbce8be9342797f5a6aaaf9"
+  revision = "ec77196f6094c3492a8b61f2c11cf937f78992ae"
 
 [[projects]]
   branch = "master"
-  digest = "1:9927d6aceb89d188e21485f42a7a254e67e6fdcf4260aba375fe18e3c300dfb4"
+  digest = "1:8d1c112fb1679fa097e9a9255a786ee47383fa2549a3da71bcb1334a693ebcfe"
   name = "golang.org/x/oauth2"
   packages = [
     ".",
     "internal",
   ]
   pruneopts = "UT"
-  revision = "9f3314589c9a9136388751d9adae6b0ed400978a"
+  revision = "0f29369cfe4552d0e4bcddc57cc75f4d7e672a33"
 
 [[projects]]
   branch = "master"
-  digest = "1:c0ea2c3d9a28afff97b7c980d68f2b29d6e896c7460b51f17af382975667cd91"
+  digest = "1:02f72873f80e76e0fa7778630887f5f545df68c6a049b607420c8f1cc6135e9d"
   name = "golang.org/x/sys"
   packages = [
     "unix",
@@ -118,7 +118,7 @@
     "windows/svc",
   ]
   pruneopts = "UT"
-  revision = "cab07311ab81fc7f180fddf7410b604373b20a00"
+  revision = "742c48ecaeb7c624c475e02f3eb0827ebb4970d4"
 
 [[projects]]
   digest = "1:7093ab359f15c3663a7cfdc539e9eaf44635bc46376d8b888fe480b3ccfbad4d"
@@ -137,7 +137,7 @@
   version = "v0.3.2"
 
 [[projects]]
-  digest = "1:6eb6e3b6d9fffb62958cf7f7d88dbbe1dd6839436b0802e194c590667a40412a"
+  digest = "1:e0a1881f9e0564bebdeac98c75e59f07acdde6ed3a5396e0e613eaad31194866"
   name = "google.golang.org/appengine"
   packages = [
     "internal",
@@ -149,24 +149,24 @@
     "urlfetch",
   ]
   pruneopts = "UT"
-  revision = "4c25cacc810c02874000e4f7071286a8e96b2515"
-  version = "v1.6.0"
+  revision = "971852bfffca25b069c31162ae8f247a3dba083b"
+  version = "v1.6.5"
 
 [[projects]]
-  digest = "1:d37c61a335d13bc49b3f90e9e13c8686e4548839b69c58549e727afb2245c454"
+  digest = "1:2a2e303bb32696f9250d4ba3d8c25c7849a6bff66a13a9f9caf4f34774b5ee51"
   name = "gopkg.in/ini.v1"
   packages = ["."]
   pruneopts = "UT"
-  revision = "c85607071cf08ca1adaf48319cd1aa322e81d8c1"
-  version = "v1.42.0"
+  revision = "1eb383f13cde0e7be091181a93b58574638129f0"
+  version = "v1.49.0"
 
 [[projects]]
   branch = "v2"
-  digest = "1:927bc5076aef9916f1920f2a07e3723e9da1dcd52baa84d29893a3f417c867b4"
+  digest = "1:99dbeb552bba530971b93f5a5fb851b855dba7ba72abec867dbd7aaaa4e649a7"
   name = "gopkg.in/urfave/cli.v2"
   packages = ["."]
   pruneopts = "UT"
-  revision = "d3ae77c26ac8db90639677e4831a728d33c36111"
+  revision = "b626059537179114d912b95f3679eb2fb87e73f4"
 
 [solve-meta]
   analyzer-name = "dep"
