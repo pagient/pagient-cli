@@ -9,9 +9,9 @@ import (
 	"github.com/pagient/pagient-go/pagient"
 )
 
-// ParsePatientFile parses the file storing the patient data that has focus in the surgery software
+// ParsePatientCSV parses the file storing the patient data that has focus in the surgery software
 // Csv format has to be: "id|lastname|firstname|birthdate|ssn|sex||"
-func ParsePatientFile(file io.Reader) (*pagient.Patient, error) {
+func ParsePatientCSV(file io.Reader) (*pagient.Patient, error) {
 	reader := csv.NewReader(file)
 	reader.Comma = '|'
 
@@ -34,7 +34,7 @@ func ParsePatientFile(file io.Reader) (*pagient.Patient, error) {
 		data := &pagient.Patient{
 			ID: id,
 			// Ssn is the fifth parameter of the line
-			Ssn: lines[0][4],
+			SSN: lines[0][4],
 			// Name is result of concatenating first name (third parameter) and last name (second parameter)
 			Name: fmt.Sprintf("%s %s", lines[0][2], lines[0][1]),
 		}

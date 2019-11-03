@@ -1,7 +1,6 @@
 package main
 
 import (
-	"io"
 	"os"
 	"os/signal"
 	"path"
@@ -10,10 +9,9 @@ import (
 
 	"github.com/pagient/pagient-cli/internal/config"
 	"github.com/pagient/pagient-cli/internal/handler"
+	"github.com/pagient/pagient-cli/internal/watcher"
 	"github.com/pagient/pagient-go/pagient"
 
-	"github.com/boz/go-throttle"
-	"github.com/fsnotify/fsnotify"
 	"github.com/oklog/run"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
@@ -84,164 +82,46 @@ func Watcher() *cli.Command {
 				})
 			}
 
-			// error chan for fileHandler
-			var errs chan error
+			// error chan for fileWatcher
+			var errChan chan error
 			{
 				gr.Add(func() error {
-					errs = make(chan error)
+					errChan = make(chan error, 1)
 
-					err := <-errs
-
-					return err
+					return <-errChan
 				}, func(reason error) {
-					close(errs)
+					close(errChan)
 				})
 			}
 
-			var fileChange chan io.Reader
 			{
 				var stop chan struct{}
 
-				// initialize backend connection
-				client := pagient.NewClient(cfg.Backend.URL)
+				// Note: we don't use path.Dir here because it does not handle case
+				//		 which path starts with two "/" in Windows: "//psf/Home/..."
+				file := strings.Replace(cfg.General.WatchFile, "\\", "/", -1)
+				fileWatcher := watcher.NewFileWatcher(file)
 
 				gr.Add(func() error {
-					stop = make(chan struct{})
-					fileChange = make(chan io.Reader, 1)
+					stop = make(chan struct{}, 1)
 
-					// has to be done here to support gr.Run retry
+					// initialize backend connection
+					client := pagient.NewClient(cfg.Backend.URL)
 					token, err := client.AuthLogin(cfg.Backend.User, cfg.Backend.Password)
 					if err != nil {
 						if pagient.IsUnauthorizedErr(err) {
-							// login data is incorrect
-							// should immediately stop application
-
-							// this produces a non pagient http error and thus does not restart
-							err = errors.Wrap(err, "failed to authenticate with api server")
-
-							log.Error().
-								Err(err).
-								Msg("")
-
-							return err
+							return errors.New("wrong API credentials")
 						}
 
-						return err
+						return errors.Wrap(err, "login at api server")
 					}
+					client = pagient.NewTokenClient(cfg.Backend.URL, token.Token)
 
-					tokenClient := pagient.NewTokenClient(cfg.Backend.URL, token.Token)
-					fileHandler := handler.NewFileHandler(cfg, tokenClient, fileChange)
+					fileHandler := handler.NewFileHandler(cfg, client)
 
-					log.Info().
-						Msg("starting file handler")
-					fileHandler.Run(stop, errs)
-
-					<-stop
-
-					return nil
-				}, func(reason error) {
-					close(stop)
-				})
-			}
-
-			watchThrottle := throttle.NewThrottle(1*time.Second, false)
-			{
-				var stop chan struct{}
-
-				gr.Add(func() error {
-					stop = make(chan struct{})
-
-					go func() {
-						for watchThrottle.Next() {
-							file, err := os.Open(cfg.General.WatchFile)
-							if err != nil {
-								log.Warn().
-									Err(err).
-									Msg("could not open watched file")
-
-								break
-							}
-
-							fileChange <- file
-						}
-					}()
-
-					<-stop
-
-					return nil
-				}, func(reason error) {
-					close(stop)
-					close(fileChange)
-				})
-			}
-
-			watcher, err := fsnotify.NewWatcher()
-			if err != nil {
-				log.Fatal().
-					Err(err).
-					Msg("failed to create file watcher")
-			}
-
-			// Note: we don't use path.Dir here because it does not handle case
-			//		 which path starts with two "/" in Windows: "//psf/Home/..."
-			watchFile := strings.Replace(cfg.General.WatchFile, "\\", "/", -1)
-			watchFolder := ""
-
-			i := strings.LastIndex(watchFile, "/")
-			if i == -1 {
-				watchFolder = watchFile
-			} else {
-				watchFolder = watchFile[:i]
-			}
-
-			if err := watcher.Add(watchFolder); err != nil {
-				log.Fatal().
-					Err(err).
-					Str("folder", watchFolder).
-					Msg("add folder to file watch")
-			}
-
-			{
-				var stop chan struct{}
-
-				log.Debug().
-					Str("watched folder", watchFolder).
-					Msg("")
-
-				gr.Add(func() error {
-					stop = make(chan struct{})
-
-					log.Info().
-						Str("file", cfg.General.WatchFile).
-						Msg("starting file watcher")
-
-					go func() {
-						for {
-							select {
-							case event := <-watcher.Events:
-								log.Debug().
-									Str("file name", event.Name).
-									Str("file operation", event.Op.String()).
-									Msg("watch file change detected")
-
-								switch event.Name {
-								case cfg.General.WatchFile:
-									if event.Op&fsnotify.Write == fsnotify.Write || event.Op&fsnotify.Create == fsnotify.Create {
-										watchThrottle.Trigger()
-									}
-								}
-							case err := <-watcher.Errors:
-								log.Warn().
-									Err(err).
-									Msg("an error occurred during file watch")
-							case <-stop:
-								// close goroutine
-								return
-							}
-						}
-					}()
-
-					<-stop
+					if err := fileWatcher.Run(fileHandler.OnFileWrite, stop, errChan); err != nil {
+						return errors.Wrap(err, "start file watcher")
+					}
 
 					return nil
 				}, func(reason error) {
@@ -251,28 +131,30 @@ func Watcher() *cli.Command {
 
 			// auto restart loop
 			for {
-				err := gr.Run()
-				if err != nil {
-					if pagient.IsHTTPResponseErr(err) || pagient.IsHTTPTransportErr(err) {
-						time.Sleep(time.Duration(cfg.General.RestartDelay) * time.Second)
-						continue
+				if err := gr.Run(); err != nil {
+					if !isRecoverableErr(err) {
+						log.Error().
+							Err(err).
+							Msg("a non-recoverable error occurred => initiate graceful shutdown")
+
+						break
 					}
 
-					log.Error().
+					sleepDuration := time.Duration(cfg.General.RestartDelay) * time.Second
+					log.Warn().
 						Err(err).
-						Msg("")
+						Msgf("attempting to restart application in %s", sleepDuration)
+
+					stop := make(chan os.Signal, 1)
+					signal.Notify(stop, os.Interrupt)
+
+					select {
+					case <-time.After(sleepDuration):
+						continue
+					case <-stop:
+						break
+					}
 				}
-
-				if err := watcher.Close(); err != nil {
-					log.Error().
-						Err(err).
-						Msg("failed to close file watcher")
-
-					return err
-				}
-
-				watchThrottle.Stop()
-				break
 			}
 
 			log.Info().
@@ -281,4 +163,8 @@ func Watcher() *cli.Command {
 			return nil
 		},
 	}
+}
+
+func isRecoverableErr(err error) bool {
+	return pagient.IsHTTPResponseErr(err) || pagient.IsHTTPTransportErr(err)
 }
